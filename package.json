@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "phaser": "^3.19.0"
+  },
+  "name": "the-f2e-w5-90sec-game",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT"
+}
