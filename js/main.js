@@ -25,21 +25,11 @@ const gamePlay = {
   create () {
     this.bg = this.add.tileSprite(width / 2, height / 2, width, height, 'bg')
     let player = this.physics.add.sprite(width / 2, height - 130, 'duck')
-    let btn = this.add.tileSprite(width / 2, height / 2, 150, 55,'btn')
-    btn.setVisible(false)
+
     this.player = player
     this.physics.add.existing(player)
     player.setCollideWorldBounds(true)
-    btn.setInteractive()
-    btn.on('pointerdown', () => {
-      btn.setTexture('btn-click')
-      btn.setSize(150, 50)
-    })
-    btn.on('pointerup', () => {
-      btn.setTexture('btn')
-      btn.setSize(150, 55)
-      this.scene.start('gamePlay')
-    })
+    
     // player.setInteractive(() => console.log('test'))
     this.anims.create({
       key: 'run',
@@ -59,11 +49,7 @@ const gamePlay = {
       frameRate: 5,
       repeat: -1
     })
-    const onHit = (_player, _rock) => {
-      this.isEnd = true
-      btn.setVisible(true)
-      player.anims.play('dead')
-    }
+    
     const addPhysics = GameObject => {
       this.physics.add.existing(GameObject);
       GameObject.body.immovable = true;
@@ -73,13 +59,68 @@ const gamePlay = {
     this.unuseQueue = []
     // balls create
     for (let i = 0; i < 10; i++) {
-      let randX = getRandom(9, 0)
-      this['ball' + i] = this.add.tileSprite(110 + 110 * randX, -110 , 110, 110, `ball${i % 5 + 1}`)
+      let randX = getRandom(7, 0)
+      this['ball' + i] = this.add.tileSprite(220 + 110 * randX, -110 , 110, 110, `ball${i % 5 + 1}`)
       addPhysics(this['ball' + i])
       this.unuseQueue.push(this['ball' + i])
       this.physics.add.collider(player, this['ball' + i], onHit)
     }
     this.usingQueue.push(...this.unuseQueue.splice(0, 1))
+
+    // end theme
+    let backgroundFill = this.add.graphics({
+      x: 0,
+      y: 0
+    })
+    backgroundFill.fillStyle(0x000000, 0.2)
+    backgroundFill.fillRect(0, 0, width, height)
+    let failedRect = this.add.graphics()
+    failedRect.fillStyle(0xffffff, 1)
+    let failedWrapper = this.add.container(width / 2 - 350, height / 2 - 90)
+    failedWrapper.setSize(700, 180)
+    failedWrapper.add(failedRect)
+    failedRect.fillRoundedRect(0, 0, 700, 180, 30)
+    let btn = this.add.tileSprite(350, 126, 150, 55,'btn')
+    failedWrapper.add(btn)
+    let failedTitle = this.add.text(281, 20, 'UH-OH! 觸礁了', {
+      color: '#ff952b',
+      fontSize: '20px',
+      align: 'center',
+      fontFamily: 'Noto Sans TC',
+    })
+    let self = this
+    function onHit (_player, _rock) {
+      self.isEnd = true
+      failedWrapper.setVisible(true)
+      backgroundFill.setVisible(true)
+      player.anims.play('dead')
+    }
+    failedTitle.setFontStyle('bold')
+    failedWrapper.add(failedTitle)
+    let failedBody = this.add.text()
+    failedBody.setSize(474)
+    failedBody.setPosition(240, 57)
+    failedBody.setColor(0x707070)
+    failedBody.setFontFamily('Noto Sans TC')
+    failedBody.setFontSize(14)
+    failedBody.setText('勝敗乃鴨家常事，大俠重新來過吧~')
+    failedWrapper.add(failedBody)
+    let failedBtnText = this.add.text(310, 111, '重新挑戰', {
+      color: 'white', fontSize: 20, fontFamily: 'Noto Sans TC'
+    })
+    failedWrapper.add(failedBtnText)
+    failedWrapper.setVisible(false)
+    backgroundFill.setVisible(false)
+    btn.setInteractive()
+    btn.on('pointerdown', () => {
+      btn.setTexture('btn-click')
+      btn.setSize(150, 50)
+    })
+    btn.on('pointerup', () => {
+      btn.setTexture('btn')
+      btn.setSize(150, 55)
+      this.scene.start('gamePlay')
+    })
   },
   update () {
     if (this.isEnd) {
