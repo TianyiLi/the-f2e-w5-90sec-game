@@ -20,6 +20,7 @@ const gamePlay = {
     this.timer = -1
     this.time = 90
     this.level = 0
+    this.lineIndex = []
     this.isEnd = false
   },
   create () {
@@ -29,8 +30,10 @@ const gamePlay = {
     this.player = player
     this.physics.add.existing(player)
     player.setCollideWorldBounds(true)
-    
-    // player.setInteractive(() => console.log('test'))
+
+    player.setInteractive(() => {
+      this.scene.play('gameFinish')
+    })
     this.anims.create({
       key: 'run',
       frames: this.anims.generateFrameNumbers('duck', { start: 1, end: 3 }),
@@ -49,31 +52,27 @@ const gamePlay = {
       frameRate: 5,
       repeat: -1
     })
-    
+
     const addPhysics = GameObject => {
       this.physics.add.existing(GameObject);
       GameObject.body.immovable = true;
       GameObject.body.moves = false;
     }
-    this.usingQueue = []
-    this.unuseQueue = []
-    this.add.tileSprite(215, height / 2, 110, 110, 'ball1')
-    this.add.tileSprite(215 + 110, height / 2, 110, 110, 'ball1')
-    this.add.tileSprite(215 + 110 * 2, height / 2, 110, 110, 'ball1')
-    this.add.tileSprite(215 + 110 * 3, height / 2, 110, 110, 'ball1')
-    this.add.tileSprite(215 + 110 * 4, height / 2, 110, 110, 'ball1')
-    this.add.tileSprite(215 + 110 * 5, height / 2, 110, 110, 'ball1')
-    this.add.tileSprite(215 + 110 * 6, height / 2, 110, 110, 'ball1')
-    this.add.tileSprite(215 + 110 * 7, height / 2, 110, 110, 'ball2')
+    // this.add.tileSprite(215, height / 2, 110, 110, 'ball1')
+    // this.add.tileSprite(215 + 110, height / 2, 110, 110, 'ball1')
+    // this.add.tileSprite(215 + 110 * 2, height / 2, 110, 110, 'ball1')
+    // this.add.tileSprite(215 + 110 * 3, height / 2, 110, 110, 'ball1')
+    // this.add.tileSprite(215 + 110 * 4, height / 2, 110, 110, 'ball1')
+    // this.add.tileSprite(215 + 110 * 5, height / 2, 110, 110, 'ball1')
+    // this.add.tileSprite(215 + 110 * 6, height / 2, 110, 110, 'ball1')
+    // this.add.tileSprite(215 + 110 * 7, height / 2, 110, 110, 'ball2')
     // balls create
-    // for (let i = 0; i < 10; i++) {
-    //   let randX = getRandom(7, 0)
-    //   this['ball' + i] = this.add.tileSprite(220 + 110 * randX, -110 , 110, 110, `ball${i % 5 + 1}`)
-    //   addPhysics(this['ball' + i])
-    //   this.unuseQueue.push(this['ball' + i])
-    //   this.physics.add.collider(player, this['ball' + i], onHit)
-    // }
-    // this.usingQueue.push(...this.unuseQueue.splice(0, 1))
+    for (let i = 0; i < 5; i++) {
+      this['ball' + i] = this.add.tileSprite(255 + 138 * (i % 5), -110 - height / 2 * (i % 2) , 110, 110, `ball${i % 5 + 1}`)
+      addPhysics(this['ball' + i])
+      this.physics.add.collider(player, this['ball' + i], onHit)
+    }
+    this.lineIndex = _.shuffle([0, 1, 2, 3, 4])
 
     // timerWrapper
     const toTimeString = () => ('0' + ~~(this.time / 60)).slice(-2) + ':' + ('0' + this.time % 60).slice(-2);
@@ -116,7 +115,7 @@ const gamePlay = {
     failedWrapper.setSize(700, 180)
     failedWrapper.add(failedRect)
     failedRect.fillRoundedRect(0, 0, 700, 180, 30)
-    let btn = this.add.tileSprite(350, 126, 150, 55,'btn')
+    let btn = this.add.tileSprite(350, 126, 150, 55, 'btn')
     failedWrapper.add(btn)
     let failedTitle = this.add.text(281, 20, 'UH-OH! 觸礁了', {
       color: '#ff952b',
@@ -152,11 +151,21 @@ const gamePlay = {
     btn.on('pointerdown', () => {
       btn.setTexture('btn-click')
       btn.setSize(150, 50)
+      btn.setPosition(350, 126 + 5)
+      failedBtnText.setPosition(310, 116)
     })
     btn.on('pointerup', () => {
       btn.setTexture('btn')
       btn.setSize(150, 55)
+      failedBtnText.setPosition(310, 111)
+      btn.setPosition(350, 126)
       this.scene.start('gamePlay')
+    })
+    btn.on('pointerout', () => {
+      btn.setTexture('btn')
+      btn.setSize(150, 55)
+      failedBtnText.setPosition(310, 111)
+      btn.setPosition(350, 126)
     })
   },
   update () {
@@ -164,16 +173,22 @@ const gamePlay = {
       return
     }
     const keyboard = this.input.keyboard.createCursorKeys()
-    for (let i = 0; i <= this.usingQueue.length - 1; i++) {
-      this.usingQueue[i].y += 4
+    if (this.allTop === 3) {
+      this.lineIndex = _.shuffle(this.lineIndex)
     }
-    for (let i = this.usingQueue.length - 1; i >= 0; i--) {
-      if (this.usingQueue[i].y >= height + 110) {
-        this.unuseQueue.push(...this.usingQueue.splice(i, 1))
-        this.usingQueue.push(...this.unuseQueue.splice(getRandom(9, 0), 1))
+
+    for (let i = 0; i < 5; i++) {
+      if (this['ball' + this.lineIndex[i]].y >= height + 110) {
+        this['ball' + this.lineIndex[i]].y = -110 - height / 2
+        this['ball' + this.lineIndex[i]].x = 255 + 138 * getRandom(5)
+      } else {
+        this['ball' + (this.lineIndex[i])].y += 4
       }
     }
+    
     if (keyboard.shift.isDown) {
+      console.log(this.usingQueue)
+      console.log(this.unuseQueue)
       this.bg.tilePositionY -= 7
       this.player.anims.play('super', true)
       this.player.setSize(185, 230)
@@ -207,8 +222,8 @@ const config = {
     }
   },
   scene: [
-    gameFinish,
     gamePlay,
+    gameFinish,
   ]
 }
 
