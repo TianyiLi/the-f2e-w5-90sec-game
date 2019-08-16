@@ -1,6 +1,6 @@
 /// <reference path="../node_modules/phaser/types/phaser.d.ts" />
-const getRandom = (max, min) => {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+const getRandom = (max, min = 0) => {
+  return ~~(Math.random() * (max - min + 1)) + min;
 }
 /** @type {Phaser.Scene} */
 const gamePlay = {
@@ -57,15 +57,51 @@ const gamePlay = {
     }
     this.usingQueue = []
     this.unuseQueue = []
+    this.add.tileSprite(215, height / 2, 110, 110, 'ball1')
+    this.add.tileSprite(215 + 110, height / 2, 110, 110, 'ball1')
+    this.add.tileSprite(215 + 110 * 2, height / 2, 110, 110, 'ball1')
+    this.add.tileSprite(215 + 110 * 3, height / 2, 110, 110, 'ball1')
+    this.add.tileSprite(215 + 110 * 4, height / 2, 110, 110, 'ball1')
+    this.add.tileSprite(215 + 110 * 5, height / 2, 110, 110, 'ball1')
+    this.add.tileSprite(215 + 110 * 6, height / 2, 110, 110, 'ball1')
+    this.add.tileSprite(215 + 110 * 7, height / 2, 110, 110, 'ball2')
     // balls create
-    for (let i = 0; i < 10; i++) {
-      let randX = getRandom(7, 0)
-      this['ball' + i] = this.add.tileSprite(220 + 110 * randX, -110 , 110, 110, `ball${i % 5 + 1}`)
-      addPhysics(this['ball' + i])
-      this.unuseQueue.push(this['ball' + i])
-      this.physics.add.collider(player, this['ball' + i], onHit)
-    }
-    this.usingQueue.push(...this.unuseQueue.splice(0, 1))
+    // for (let i = 0; i < 10; i++) {
+    //   let randX = getRandom(7, 0)
+    //   this['ball' + i] = this.add.tileSprite(220 + 110 * randX, -110 , 110, 110, `ball${i % 5 + 1}`)
+    //   addPhysics(this['ball' + i])
+    //   this.unuseQueue.push(this['ball' + i])
+    //   this.physics.add.collider(player, this['ball' + i], onHit)
+    // }
+    // this.usingQueue.push(...this.unuseQueue.splice(0, 1))
+
+    // timerWrapper
+    const toTimeString = () => ('0' + ~~(this.time / 60)).slice(-2) + ':' + ('0' + this.time % 60).slice(-2);
+    let timerWrapper = this.add.container(1010, 0)
+    timerWrapper.setSize(190, 130)
+    let timerRect = this.add.graphics()
+    timerRect.fillStyle(0x262626, 1)
+    timerRect.fillRoundedRect(0, 0, 190, 130, {
+      tl: 0, tr: 0, bl: 30, br: 30
+    })
+    timerWrapper.add(timerRect)
+    let timeText = this.add.text(21, 17, 'TIME', {
+      fontFamily: 'Roboto',
+      fontSize: 14,
+      color: 'white'
+    })
+    let timeCountdown = this.add.text(23, 40, toTimeString(), {
+      fontFamily: 'Roboto',
+      fontSize: 58,
+      color: 'white'
+    })
+    timeCountdown.setFontStyle('bold')
+    timerWrapper.add(timeText)
+    timerWrapper.add(timeCountdown)
+    this.timer = setInterval(() => {
+      this.time--
+      timeCountdown.setText(toTimeString())
+    }, 1000)
 
     // end theme
     let backgroundFill = this.add.graphics({
@@ -94,6 +130,7 @@ const gamePlay = {
       failedWrapper.setVisible(true)
       backgroundFill.setVisible(true)
       player.anims.play('dead')
+      clearInterval(self.timer)
     }
     failedTitle.setFontStyle('bold')
     failedWrapper.add(failedTitle)
@@ -146,9 +183,9 @@ const gamePlay = {
       this.player.setSize(130, 230)
     }
 
-    if (keyboard.right.isDown && this.player.x <= width - 210) {
+    if (keyboard.right.isDown && this.player.x <= width - 215) {
       this.player.x += 4
-    } else if (keyboard.left.isDown && this.player.x >= 210) {
+    } else if (keyboard.left.isDown && this.player.x >= 215) {
       this.player.x -= 4
     }
   }
@@ -170,7 +207,8 @@ const config = {
     }
   },
   scene: [
-    gamePlay
+    gameFinish,
+    gamePlay,
   ]
 }
 
