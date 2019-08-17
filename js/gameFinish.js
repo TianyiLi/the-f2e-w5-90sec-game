@@ -67,6 +67,7 @@ const gameFinish = {
       console.log('uppp')
       btnText.setPosition(27, 10)
       btn.setPosition(75, 55/2)
+      this.scene.start('gamePlay')
     })
     btn.on('pointerout', () => {
       btn.setTexture('btn')

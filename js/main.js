@@ -6,6 +6,7 @@ const getRandom = (max, min = 0) => {
 const gamePlay = {
   key: 'gamePlay',
   preload () {
+    console.log('loading')
     this.load.image('bg', './assets/img_BG.svg')
     this.load.image('ducky', './assets/duck_normal_01.svg')
     this.load.spritesheet('duck', './assets/duck-sprite.png', { frameHeight: 230, frameWidth: 130 })
@@ -15,25 +16,39 @@ const gamePlay = {
     this.load.image('ball3', './assets/Ball_03.svg')
     this.load.image('ball4', './assets/Ball_04.svg')
     this.load.image('ball5', './assets/Ball_05.svg')
+    this.load.image('star', './assets/SuperStar.svg')
     this.load.image('btn', './assets/btn_start_off.svg')
     this.load.image('btn-click', './assets/btn_start_off_click.svg')
+    this.load.image('boss1', './assets/Boss_01.svg')
+    this.load.image('boss2', './assets/Boss_02.svg')
     this.timer = -1
     this.time = 90
     this.level = 0
-    this.lineIndex = []
     this.isEnd = false
+    this.notMoveIndex = getRandom(5)
+    this.getStar = false
+    this.normalSpeed = 4
+    this.startStar = false
   },
   create () {
+    console.log('create')
     this.bg = this.add.tileSprite(width / 2, height / 2, width, height, 'bg')
-    let player = this.physics.add.sprite(width / 2, height - 130, 'duck')
-
+    let player = this.physics.add.sprite(width / 2, height - 80, 'duck')
+    let star = this.add.tileSprite(0, -100, 90, 74, 'star')
+    this.boss1Pos = [255 + 385 / 2, width / 2, width - 255 - 385 / 2]
+    this.boss2Pos = [255 + 600 / 2, width - 255 - 600 / 2]
+    let boss1 = this.add.tileSprite(this.boss1Pos[getRandom(2, 0)], -310, 385, 316, 'boss1')
+    let boss2 = this.add.tileSprite(this.boss2Pos[getRandom(1, 0)], -430, 600, 422, 'boss2')
+    this.boss1 = boss1
+    this.boss2 = boss2
+    boss1.setVisible(false)
+    boss2.setVisible(false)
+    this.star = star
     this.player = player
     this.physics.add.existing(player)
-    player.setCollideWorldBounds(true)
+    player.setCollideWorldBounds(false)
+    player.setInteractive()
 
-    player.setInteractive(() => {
-      this.scene.play('gameFinish')
-    })
     this.anims.create({
       key: 'run',
       frames: this.anims.generateFrameNumbers('duck', { start: 1, end: 3 }),
@@ -58,21 +73,20 @@ const gamePlay = {
       GameObject.body.immovable = true;
       GameObject.body.moves = false;
     }
-    // this.add.tileSprite(215, height / 2, 110, 110, 'ball1')
-    // this.add.tileSprite(215 + 110, height / 2, 110, 110, 'ball1')
-    // this.add.tileSprite(215 + 110 * 2, height / 2, 110, 110, 'ball1')
-    // this.add.tileSprite(215 + 110 * 3, height / 2, 110, 110, 'ball1')
-    // this.add.tileSprite(215 + 110 * 4, height / 2, 110, 110, 'ball1')
-    // this.add.tileSprite(215 + 110 * 5, height / 2, 110, 110, 'ball1')
-    // this.add.tileSprite(215 + 110 * 6, height / 2, 110, 110, 'ball1')
-    // this.add.tileSprite(215 + 110 * 7, height / 2, 110, 110, 'ball2')
+    addPhysics(star)
+    addPhysics(boss1)
+    addPhysics(boss2)
+
+    this.physics.add.collider(player, boss1, onHit)
+    this.physics.add.collider(player, boss2, onHit)
+    this.physics.add.collider(player, star, onStar)
+
     // balls create
-    for (let i = 0; i < 5; i++) {
-      this['ball' + i] = this.add.tileSprite(255 + 138 * (i % 5), -110 - height / 2 * (i % 2) , 110, 110, `ball${i % 5 + 1}`)
+    for (let i = 0; i < 6; i++) {
+      this['ball' + i] = this.add.tileSprite(255 + 138 * (i % 6), -110, 110, 110, `ball${i % 5 + 1}`)
       addPhysics(this['ball' + i])
       this.physics.add.collider(player, this['ball' + i], onHit)
     }
-    this.lineIndex = _.shuffle([0, 1, 2, 3, 4])
 
     // timerWrapper
     const toTimeString = () => ('0' + ~~(this.time / 60)).slice(-2) + ':' + ('0' + this.time % 60).slice(-2);
@@ -97,9 +111,29 @@ const gamePlay = {
     timeCountdown.setFontStyle('bold')
     timerWrapper.add(timeText)
     timerWrapper.add(timeCountdown)
+    let self = this
     this.timer = setInterval(() => {
       this.time--
       timeCountdown.setText(toTimeString())
+      if (this.time <= 0) {
+        clearInterval(this.timer)
+        this.scene.start('gameFinish')
+        return
+      }
+      if ((this.time % 10) === 0) {
+        star.setPosition(getRandom(255 + 138 * 5, 255 + 138), -110)
+        this.startStar = true
+      }
+      if (this.time >= 60) {
+        this.level = 0
+      } else if (this.time < 60 && this.time >= 30) {
+        this.level = 1
+        this.normalSpeed = 6
+      } else if (this.time >= 0) {
+        this.normalSpeed = 8
+        this.level = 2
+      }
+      console.log(this.level)
     }, 1000)
 
     // end theme
@@ -123,13 +157,25 @@ const gamePlay = {
       align: 'center',
       fontFamily: 'Noto Sans TC',
     })
-    let self = this
     function onHit (_player, _rock) {
       self.isEnd = true
       failedWrapper.setVisible(true)
       backgroundFill.setVisible(true)
       player.anims.play('dead')
       clearInterval(self.timer)
+    }
+    function onStar (_player, _rock) {
+      self.startStar = false
+      self.getStar = true
+      star.y = -55
+      for (let i = 0; i < 6; i++) {
+        self['ball' + i].y = -110
+      }
+      boss1.y = -400
+      boss2.y = -440
+      setTimeout(() => {
+        self.getStar = false
+      }, 3000)
     }
     failedTitle.setFontStyle('bold')
     failedWrapper.add(failedTitle)
@@ -167,41 +213,104 @@ const gamePlay = {
       failedBtnText.setPosition(310, 111)
       btn.setPosition(350, 126)
     })
+    this.needRenew = false
+    window.ball = this.ball0
   },
   update () {
     if (this.isEnd) {
       return
     }
     const keyboard = this.input.keyboard.createCursorKeys()
-    if (this.allTop === 3) {
-      this.lineIndex = _.shuffle(this.lineIndex)
+    if ((this.needRenew) && this.level === 0) {
+      console.log('run new')
+      for (let i = 0; i < 6; i++) {
+        this['ball' + i].y = -55
+      }
+      this.notMoveIndex = getRandom(5)
+      this.needRenew = false
+    } else if ((this.needRenew) && this.level === 1) {
+      this.boss1.x = this.boss1Pos[getRandom(2, 0)]
+      this.boss1.y = -400
+      this.needRenew = false
+    } else if ((this.needRenew) && this.level === 2) {
+      this.boss2.x = this.boss2Pos[getRandom(1, 0)]
+      this.boss2.y = -430
+      this.needRenew = false
     }
-
-    for (let i = 0; i < 5; i++) {
-      if (this['ball' + this.lineIndex[i]].y >= height + 110) {
-        this['ball' + this.lineIndex[i]].y = -110 - height / 2
-        this['ball' + this.lineIndex[i]].x = 255 + 138 * getRandom(5)
-      } else {
-        this['ball' + (this.lineIndex[i])].y += 4
+    if (this['ball0'].visible) {
+      let notThisStage = false
+      for (let i = 0; i < 6; i++) {
+        if (this['ball' + i].y > height + 55) {
+          if (this.level > 0) {
+            console.log('setVisible')
+            notThisStage = true
+            break
+          }
+          this.needRenew = true
+        }
+        if (this['ball' + i].y < -40 && this.level > 0) {
+          notThisStage = true
+          break
+        }
+        if (!(i < this.notMoveIndex + (2) && i > this.notMoveIndex - (2)) && !this.needRenew) {
+          this['ball' + i].y += this.getStar ? 0 : this.normalSpeed
+        }
+      }
+      if (notThisStage === true) {
+        this.needRenew = true
+        for (let i = 0; i < 6; i++) {
+          this['ball' + i].setVisible(false)
+          this['ball' + i].y = -110
+        }
+        if (this.level === 1) {
+          this.boss1.setVisible(true)
+        }
       }
     }
-    
-    if (keyboard.shift.isDown) {
-      console.log(this.usingQueue)
-      console.log(this.unuseQueue)
-      this.bg.tilePositionY -= 7
-      this.player.anims.play('super', true)
-      this.player.setSize(185, 230)
-    } else {
-      this.bg.tilePositionY -= 4
+    if (this.boss1.visible) {
+      this.boss1.y += this.getStar ? 0 : this.normalSpeed
+      if (this.boss1.y >= height + 316 / 2) {
+        this.needRenew = true
+        if (this.level === 2) {
+          console.log('level 2')
+          this.boss1.setVisible(false)
+          this.boss1.y = -200
+          this.boss2.setVisible(true)
+        }
+      } else if (this.boss1.y < -316 / 2 && this.level === 2) {
+        console.log('lovel up')
+        this.boss1.setVisible(true)
+        this.boss1.y = -200
+        this.boss2.setVisible(true)
+      }
+    }
+    if (this.boss2.visible) {
+      this.boss2.y += this.getStar ? 0 : this.normalSpeed
+      if (this.boss2.y >= height + 422 / 2) {
+        this.needRenew = true
+      }
+    }
+    if (this.startStar) {
+      this.star.y += this.normalSpeed
+      if (this.star.y > height + 55) {
+        this.startStar = false
+        this.star.y = -100
+      }
+    }
+
+    this.bg.tilePositionY -= this.normalSpeed
+    if (!this.getStar) {
       this.player.anims.play('run', true)
-      this.player.setSize(130, 230)
+      this.player.setSize(110, 210)
+    } else {
+      this.player.anims.play('super', true)
+      this.player.setSize(185, 210)
     }
 
     if (keyboard.right.isDown && this.player.x <= width - 215) {
-      this.player.x += 4
+      this.player.x += this.normalSpeed
     } else if (keyboard.left.isDown && this.player.x >= 215) {
-      this.player.x -= 4
+      this.player.x -= this.normalSpeed
     }
   }
 }
@@ -218,7 +327,7 @@ const config = {
       gravity: {
         y: 0
       },
-      debug: true
+      debug: false
     }
   },
   scene: [
